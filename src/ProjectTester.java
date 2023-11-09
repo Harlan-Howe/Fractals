@@ -1,5 +1,4 @@
 import javax.swing.*;
-import javax.swing.colorchooser.ColorSelectionModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -8,8 +7,6 @@ public class ProjectTester extends JFrame implements ActionListener
 {
     public static void main(String[] args)
     {
-
-
         ProjectTester app = new ProjectTester();
     }
 

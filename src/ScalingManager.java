@@ -7,12 +7,12 @@ public class ScalingManager
                                         //     window. For example, we might have an 800 x 800 pixel window that
                                         //     corresponds to a graph from -2 to +2 on the real axis and -1.5 to +1.5
                                         //     on the imaginary axis. (This would be a rect of
-                                        //     (x, y, w, h) --> (-2, -1.5, 4, 3).
+                                        //     (x, y, w, h) --> (-2, -1.5, 4, 3) ).
 
     /**
      * constructor - if either window or math is null, it will create a non-null DoubleRectangle with default values.
-     * @param window
-     * @param math
+     * @param window - the dimensions of the window
+     * @param math - the dimensions of the mathematical space the window represents.
      */
     public ScalingManager(DoubleRectangle window, DoubleRectangle math)
     {
@@ -69,22 +69,22 @@ public class ScalingManager
 
 
     /**
-     * considers a given sourceValue within a range from sourceMin to sourceMax and determines a destinationVaule at the
+     * considers a given sourceValue within a range from sourceMin to sourceMax and determines a destinationValue at the
      * same relative position within a destMin - destMax range.
      * For example:
      *     sourceMin            sourceValue                                 sourceMax
      *     destMin              destValue                                   destMax
      *
-     * if source Value is about 30% of the way between sourcemin and source max, we want to find a destinationValue that
-     * is also 30% of the way between destmin and destmax.
+     * if source Value is about 30% of the way between sourceMin and sourceMax, we want to find a destinationValue that
+     * is also 30% of the way between destMin and destMax.
      * prerequisite: sourceMin != sourceMax
      * Note: sourceValue does <i>not</i> need to fall between sourceMin and sourceMax.
-     * @param sourceValue
-     * @param sourceMin
-     * @param sourceMax
-     * @param destMin
-     * @param destMax
-     * @return the destination value.
+     * @param sourceValue - the value we are trying to convert from source --> destination
+     * @param sourceMin - the left edge of the source range
+     * @param sourceMax - the right edge of the source range
+     * @param destMin - the left edge of the destination range
+     * @param destMax - the right edge of the destination range
+     * @return the destination value that corresponds to the sourceValue.
      */
     public double map(double sourceValue, double sourceMin, double sourceMax, double destMin, double destMax)
     {

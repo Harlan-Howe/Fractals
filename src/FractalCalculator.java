@@ -15,7 +15,7 @@ public class FractalCalculator
      */
     public int getCountForComplexNumber(ComplexNumber c)
     {
-        // TODO - you need to write this.
+        // TODO #1 - you need to write this.
         return -1; // temporary for stub function.
     }
 }
