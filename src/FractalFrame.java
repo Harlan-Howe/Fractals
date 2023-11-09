@@ -4,7 +4,7 @@ import java.awt.*;
 public class FractalFrame extends JFrame
 {
 
-    private FractalPane mainPane;
+    private final FractalPane mainPane;
 
     public FractalFrame()
     {
