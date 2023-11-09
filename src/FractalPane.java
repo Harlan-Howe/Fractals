@@ -10,8 +10,8 @@ public class FractalPane extends JPanel implements MouseListener, MouseMotionLis
 
     private BufferedImage workspace; // a window-sized chunk of memory where we'll draw the fractal. Periodically, we'll
                                      //        copy this to the window.
-    private Object workspaceMutex;   // a "mutex" (a.k.a. "traffic control") that ensures only one thing uses/changes
-                                     //        the workspace at a time. (Definitely not on the AP.)
+    private final Object workspaceMutex;  // a "mutex" (a.k.a. "traffic control") that ensures only one thing
+                                     //        uses/changes the workspace at a time. (Definitely not on the AP.)
 
     ScalingManager scaleManager;
 
@@ -20,11 +20,8 @@ public class FractalPane extends JPanel implements MouseListener, MouseMotionLis
                                             //      (or where it just ended).
 
     private CalculationThread calculationThread;  // An instance of a class that will execute a run() function
-                                                  //      simultaneously with the code in this class. (Definitely not on the AP.)
-
-    private Font displayFont;
-
-    private Point mousepos;
+                                                  //      simultaneously with the code in this class.
+                                                  //      (Definitely not on the AP.)
 
     public FractalPane()
     {
@@ -80,49 +77,6 @@ public class FractalPane extends JPanel implements MouseListener, MouseMotionLis
 
     }
 
-//    /**
-//     * find the mathematical point that is found at the given screen locations. Rather than making a new point and
-//     * returning it, it will modify the one that is given to it, a slight speed improvement since we don't need to
-//     * allocate memory
-//     * @param cp - the mathematical point that this method will CHANGE to update with the output info
-//     * @param sp - the location in the window of interest.
-//     */
-//    public void mathPointForScreenPoint(DoublePoint cp, DoublePoint sp)
-//    {
-//        cp.setX(map(sp.getX(), 0,windowBounds.getWidth(), mathBounds.getX(), mathBounds.getX()+mathBounds.getWidth()));
-//        cp.setY(map(sp.getY(), 0,windowBounds.getHeight(), mathBounds.getY(), mathBounds.getY()+mathBounds.getHeight()));
-//    }
-//
-//
-//    /**
-//     * considers a given sourceValue within a range from sourceMin to sourceMax and determines a destinationVaule at the
-//     * same relative position within a destMin - destMax range.
-//     * For example:
-//     *     sourceMin            sourceValue                                 sourceMax
-//     *     destMin              destValue                                   destMax
-//     *
-//     * if source Value is about 30% of the way between sourcemin and source max, we want to find a destinationValue that
-//     * is also 30% of the way between destmin and destmax.
-//     * prerequisite: sourceMin != sourceMax
-//     * Note: sourceValue does <i>not</i> need to fall between sourceMin and sourceMax.
-//     * @param sourceValue
-//     * @param sourceMin
-//     * @param sourceMax
-//     * @param destMin
-//     * @param destMax
-//     * @return the destination value.
-//     */
-//    public double map(double sourceValue, double sourceMin, double sourceMax, double destMin, double destMax)
-//    {
-//        if (sourceMin == sourceMax)
-//            throw new RuntimeException("Cannot map a point within a zero range - source min and max are both "+sourceMin+".");
-//        return destMin + (destMax-destMin) * (sourceValue-sourceMin)/(sourceMax-sourceMin);
-//    }
-
-
-
-
-
     @Override
     /**
      * the user has the mouse button pressed and the mouse has just changed position. This is the response.
@@ -147,7 +101,7 @@ public class FractalPane extends JPanel implements MouseListener, MouseMotionLis
 
     @Override
     /**
-     * The user has just released the mousebutton in the same place as where it was pressed. This is the response.
+     * The user has just released the mouse button in the same place as where it was pressed. This is the response.
      */
     public void mouseClicked(MouseEvent e) //overriding method in MouseListener interface
     {
@@ -218,7 +172,7 @@ public class FractalPane extends JPanel implements MouseListener, MouseMotionLis
         //      (x,y) of top left corner and (width/length) - even if the dragEnd isn't below and to the right of dragStart.
         DoubleRectangle dragRect = new DoubleRectangle(dragStart,dragEnd);
 
-        // Calculate the new mathBounds we would need at the window's corners to shrink the current mathbounds
+        // Calculate the new mathBounds we would need at the window's corners to shrink the current math bounds
         //     (currently at the window's corners)  to get shrunk in so that they are found at the locations in the
         //     window set by the dragged rect.
         //     Note: we will use the original mathBounds for all four computations, we don't want to change mathBounds
@@ -233,9 +187,8 @@ public class FractalPane extends JPanel implements MouseListener, MouseMotionLis
         scaleManager.setMathBounds(new DoubleRectangle(tempMinX,tempMinY,tempMaxX-tempMinX,tempMaxY-tempMinY));
 
 
-
         // ---- The rest of this is just fancy. When we zoom out a step, instead of just restarting our scan with a blank
-        //          screen, we are going to copy a scalled-down version of the window into the dragged area, so we can
+        //          screen, we are going to copy a scaled-down version of the window into the dragged area, so we can
         //          see the relationship between the previous view and this one as it loads.
 
         // find the ratio between the size of the dragged box and the size of the window. This will be used to determine
@@ -298,7 +251,7 @@ public class FractalPane extends JPanel implements MouseListener, MouseMotionLis
         //          workspace, so we can see the relationship between the previous view and this one as it loads.
 
         // find the ratio between the size of the dragged box and the size of the window. This will be used to determine
-        //     the sise of the boxes we'll be drawing.
+        //     the size of the boxes we'll be drawing.
         double horizontalRatio = windowBounds.getWidth()/dragRect.getWidth();
         double verticalRatio = windowBounds.getHeight()/dragRect.getHeight();
 
