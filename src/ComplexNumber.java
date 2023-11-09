@@ -77,7 +77,7 @@ public class ComplexNumber
 
 
     /**
-     * the norm is the 'distance" from the origin to this point in the complex plane, this method returns the square of that.
+     * the norm is the "distance" from the origin to this point in the complex plane, this method returns the square of that.
      * We use the square because to find the norm, you use pythagoras, which involves a square root. Square roots are slow,
      * so if we don't take the root, we get the norm squared, which takes (much) less time to calculate.
      * @return the square of the norm of this complex number.
