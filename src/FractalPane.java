@@ -71,10 +71,6 @@ public class FractalPane extends JPanel implements MouseListener, MouseMotionLis
             g.drawOval(2,2,10,10);
         }
 
-
-
-
-
     }
 
     @Override
@@ -245,7 +241,6 @@ public class FractalPane extends JPanel implements MouseListener, MouseMotionLis
         scaleManager.setMathBounds(new DoubleRectangle(tempMinX,tempMinY,tempMaxX-tempMinX,tempMaxY-tempMinY));
         System.out.println(mathBounds);
 
-
         // ---- The rest of this is just fancy. When we zoom in a step, instead of just restarting our scan with a blank
         //          screen, we are going to copy a blown-up version of the image in the drag window into the window's
         //          workspace, so we can see the relationship between the previous view and this one as it loads.
@@ -255,17 +250,23 @@ public class FractalPane extends JPanel implements MouseListener, MouseMotionLis
         double horizontalRatio = windowBounds.getWidth()/dragRect.getWidth();
         double verticalRatio = windowBounds.getHeight()/dragRect.getHeight();
 
-
         // make a blank BufferedImage the size of the draggedRect we're going to copy that portion of the workspace into
         //     it in a moment.
-        BufferedImage tempImage = new BufferedImage((int)(dragRect.getWidth()),(int)dragRect.getHeight(),BufferedImage.TYPE_INT_RGB);
+        BufferedImage tempImage = new BufferedImage((int)(dragRect.getWidth()),
+                                                    (int)dragRect.getHeight(),
+                                                    BufferedImage.TYPE_INT_RGB);
         Graphics temp_g = tempImage.getGraphics();
 
         // wait until the workspace is available, and then lock it so that others can't mess with it for a while.
         synchronized (workspaceMutex)
         {
             // copy the dragRectangle area from the current workspace into the temp BI we just created.
-            temp_g.drawImage(workspace.getSubimage((int)dragRect.getX(), (int)dragRect.getY(), (int)dragRect.getWidth(), (int)dragRect.getHeight()),0,0,null);
+            temp_g.drawImage(workspace.getSubimage( (int)dragRect.getX(),
+                                                    (int)dragRect.getY(),
+                                                    (int)dragRect.getWidth(),
+                                                    (int)dragRect.getHeight()),
+                             0, 0, null);
+
             // draw boxes of color into the workspace that correspond to the pixels in the temp image.
             Graphics work_g = workspace.getGraphics();
             for (int i=(int)dragRect.getWidth()-1; i>-1; i--)
@@ -293,21 +294,30 @@ public class FractalPane extends JPanel implements MouseListener, MouseMotionLis
     // The fact that it extends Thread means that the run() method can be operating at the same time as the other things
     //     in FractalPane (and the rest of the program) are happening. So we can do an extended set of calculations and
     //     updating the screen at the same time - this is what makes the screen seem to "live update" instead of just
-    //     popping a finished fractal on the screen at the end of the scan. We can also interrupt the calculation mid-loop.
+    //     popping a finished fractal on the screen at the end of the (time-consuming) scan. We can also interrupt the
+    //     calculation mid-loop.
     //     Note: we never call "run()" directly - the thread is activated by calling the Thread method "start()" - which
     //           calls run(), itself.
     class CalculationThread extends Thread
     {
-        private int x, y;
-        private ComplexNumber c;
+        private int currentX, currentY;
+        DoublePoint cp = new DoublePoint();
+        DoublePoint sp = new DoublePoint();
+
+        DoubleRectangle windowBounds;
+        ColorConverter converter;
+        FractalCalculator calculator;
+
         private boolean needsReset;
         private boolean isScanning;
 
         public CalculationThread()
         {
             super();
-            x = 0;
-            y = 0;
+            currentX = 0;
+            currentY = 0;
+            cp = new DoublePoint();
+            sp = new DoublePoint();
             needsReset = false;
             isScanning = false;
         }
@@ -330,13 +340,11 @@ public class FractalPane extends JPanel implements MouseListener, MouseMotionLis
          */
         public void run()
         {
-            DoublePoint cp = new DoublePoint();
-            DoublePoint sp = new DoublePoint();
-            DoubleRectangle windowBounds = scaleManager.getWindowBounds();
-            ColorConverter converter = new ColorConverter();
-            FractalCalculator calculator = new FractalCalculator();
-            Color pixelColor;
-            int count;
+            ComplexNumber c;
+            windowBounds = scaleManager.getWindowBounds();
+            converter = new ColorConverter();
+            calculator = new FractalCalculator();
+
             isScanning = false;
             needsReset = true;
 
@@ -345,52 +353,99 @@ public class FractalPane extends JPanel implements MouseListener, MouseMotionLis
                 if (needsReset)
                 {
                     needsReset = false;
-
-                    for (y = 0; y < windowBounds.getHeight(); y++)
-                    {
-                        isScanning = true;
-                        for (x = 0; x < windowBounds.getWidth(); x++)
-                        {
-                            // find the complex number corresponding to this pixel.
-                            sp.setXY(x, y);
-                            scaleManager.mathPointForScreenPoint(cp, sp);
-                            c = new ComplexNumber(cp);
-
-                            count = calculator.getCountForComplexNumber(c); // bounce around until you go out of range...
-                            pixelColor = converter.colorMap(count); // convert the number of bounces to a color...
-
-                            // draw that color at this location.
-                            synchronized (workspaceMutex) // wait until you can "lock" the workspace image - this prevents simultaneous use.
-                            {
-                                workspace.setRGB(x, y, pixelColor.getRGB()); // put the color in for this pixel location.
-                            } // ok, I'm done with the workspace for the moment.
-
-                            if (needsReset) // if this scan is canceled, leave this loop early.
-                                break;
-                        }
-
-                        if (needsReset) // if this scan is canceled, leave this loop, too!
-                            break;
-
-                        // The next time it gets a chance, the main thread should update the screen. We only do this once
-                        //   per line, because the program runs too slow if it is drawing after (almost) every pixel.
-                        repaint();
-                    }
+                    isScanning = true;
+                    CalculateFractal();
                 }
-                if (isScanning) // if we got here, we're not scanning anymore. If we just finished scanning, update the indicator
+                if (isScanning) // if we got here, we're not scanning anymore; we might have been interrupted.
+                                // If we just finished scanning, update the indicator
                 {
                     isScanning = false; //(This deactivates the little red dot in the corner)
-                    repaint();
+                    repaint();   // update the screen at the next opportunity.
                 }
                 try
                 {
                 Thread.sleep(250); // chill out for 1/4 second. This means that we will only be considering whether
                                     // to recalculate the screen that often, if the scan is complete.
-                } catch (InterruptedException iExp)
+                } catch (InterruptedException iExp)  // in case something cancels the program in the 1/4 second.
                 {
-                    iExp.printStackTrace();
+                    System.out.println("Thread interrupted.");
                 }
             }
+        }
+
+        /**
+         * Performs the calculations to fill in the workspace with a fractal
+         */
+        private void CalculateFractal()
+        {
+            ComplexNumber c;
+            int count;
+            Color pixelColor;
+
+            // TODO #3: Loop over all pixels on this screen: calculate the color and set the color for that pixel.
+            // Please use variables "currentX" and "currentY" for the pixel coordinates. (Perhaps instead of "i"
+            // and "j"?)
+            // Hint: make use of windowBounds.getWidth() and getHeight().
+            // The remainder of this method has the stuff that should happen inside the loop(s).
+
+                    if (needsReset) // if this scan is canceled (in favor of another one), leave this loop early.
+                        return;
+
+                    // find the complex number corresponding to this pixel.
+                    c = ConvertCurrentXYtoComplex();
+                    count = calculator.getCountForComplexNumber(c); // bounce around until you go out of range...
+                    pixelColor = converter.colorMap(count); // convert the number of bounces to a color...
+
+                    // draw that color at this location.
+                    setPixelToColor(pixelColor);
+
+                // The next time it gets a chance, the main thread should update the screen. We only do this
+                //    ONCE PER LINE, because the program runs too slow if it is drawing after (almost) every
+                //    pixel.
+                repaint();
+        }
+
+        /**
+         * sets the color of the pixel at (currentX, currentY) to the given pixelColor.
+         * @param pixelColor - color to set the pixel to
+         */
+        private void setPixelToColor(Color pixelColor)
+        {
+            synchronized (workspaceMutex) // wait until you can "lock" the workspace image - this prevents
+                                          // simultaneous use.
+            {
+                workspace.setRGB(currentX, currentY, pixelColor.getRGB()); // put the color in for this pixel location.
+            } // ok, I'm finished with the workspace for the moment.
+        }
+
+        /**
+         * fills a box with upper left corner (currentX, currentY) with the given color
+         * @param width - width of the box, in pixels
+         * @param height - height of the box, in pixels
+         * @param boxColor - color of the box
+         */
+        private void setBoxToColor(int width, int height, Color boxColor)
+        {
+            synchronized (workspaceMutex) // wait until you can "lock" the workspace image - this prevents
+                                          // simultaneous use.
+            {
+                Graphics wg = workspace.getGraphics();
+                wg.setColor(boxColor);
+                wg.fillRect(currentX, currentY, width, height); // draw the box in this color.
+            } // ok, I'm finished with the workspace for the moment.
+        }
+
+        /**
+         * convert the onscreen (currentX, currentY) to a complex number
+         * (Note: we're using the fields (currentX, currentY), not passing (x, y) as a parameter to save time allocating and
+         * copying the values.)
+         * @return - the complex number corresponding to the mathematical field at (currentX, currentY).
+         */
+        private ComplexNumber ConvertCurrentXYtoComplex()
+        {
+            sp.setXY(currentX, currentY);
+            scaleManager.mathPointForScreenPoint(cp, sp);
+            return new ComplexNumber(cp);
         }
     }
 }
